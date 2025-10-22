@@ -4,12 +4,12 @@
 # SAFETY SETTINGS & LOGGING
 # =====================================================
 
-set -e  # Exit immediately if a command fails
-set -o pipefail  # Fail if any part of a pipeline fails
+set -e  # Exit immediately if any command fails
+set -o pipefail  # Fail if any part of the pipeline fails
 
 # Create timestamped log file
 LOG_FILE="deploy_$(date +%Y%m%d_%H%M%S).log"
-exec > >(tee -a "$LOG_FILE") 2>&1  # Log all output and errors
+exec > >(tee -a "$LOG_FILE") 2>&1  # Log all output and errors in this file
 
 echo "=== STARTING DEPLOYMENT PROCESS ==="
 echo "Logs will be saved to: $LOG_FILE"
@@ -26,7 +26,7 @@ read -p "Enter remote server IP address: " SERVER_IP
 read -p "Enter path to SSH private key: " SSH_KEY_PATH
 read -p "Enter application internal (container) port: " APP_PORT
 
-BRANCH=${BRANCH:-main}
+BRANCH=${BRANCH:-main} #set the branch to main automatically if the user does not provide a branch
 
 # Validate input
 if [[ -z "$REPO_URL" || -z "$PAT" || -z "$SSH_USER" || -z "$SERVER_IP" || -z "$SSH_KEY_PATH" || -z "$APP_PORT" ]]; then
