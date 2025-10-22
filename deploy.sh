@@ -182,3 +182,42 @@ EOF
 
 echo "✅ Deployment successful! Your application should now be live."
 echo "🗒️ Logs stored in: $LOG_FILE"
+
+
+# ------------------------------
+# OPTIONAL: Cleanup mode
+# ------------------------------
+if [[ "$1" == "--cleanup" ]]; then
+  echo "=== Running cleanup mode on remote host ==="
+
+  # Confirm parameters are available
+  read -p "Enter SSH username: " SSH_USER
+  read -p "Enter remote server IP address: " SERVER_IP
+  read -p "Enter path to SSH private key: " SSH_KEY_PATH
+  read -p "Enter repository name (folder name on server): " REPO_NAME
+
+  if [[ -z "$SSH_USER" || -z "$SERVER_IP" || -z "$SSH_KEY_PATH" || -z "$REPO_NAME" ]]; then
+    echo "❌ Missing required parameters for cleanup."
+    exit 1
+  fi
+
+  ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
+    set -e
+    echo "Stopping and removing containers..."
+    sudo docker stop \$(sudo docker ps -aq) 2>/dev/null || true
+    sudo docker rm \$(sudo docker ps -aq) 2>/dev/null || true
+
+    echo "Removing application directory..."
+    sudo rm -rf ~/$REPO_NAME
+
+    echo "Removing Nginx configuration..."
+    sudo rm -f /etc/nginx/sites-available/$REPO_NAME
+    sudo rm -f /etc/nginx/sites-enabled/$REPO_NAME
+    sudo nginx -t && sudo systemctl reload nginx
+
+    echo "✅ Cleanup completed successfully."
+EOF
+
+  echo "✅ Remote cleanup completed. Exiting."
+  exit 0
+fi
