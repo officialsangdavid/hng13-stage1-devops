@@ -1,22 +1,18 @@
 #!/bin/bash
 
-# =====================================================
 # SAFETY SETTINGS & LOGGING
-# =====================================================
 
 set -e  # Exit immediately if any command fails
-set -o pipefail  # Fail if any part of the pipeline fails
+set -o pipefail  # To fail if any part of the pipeline fails
 
-# Create timestamped log file
+# The timestamped log file for all output and errors 
 LOG_FILE="deploy_$(date +%Y%m%d_%H%M%S).log"
-exec > >(tee -a "$LOG_FILE") 2>&1  # Log all output and errors in this file
+exec > >(tee -a "$LOG_FILE") 2>&1 
 
-echo "=== STARTING DEPLOYMENT PROCESS ==="
+echo " STARTING THE DEPLOYMENT PROCESS "
 echo "Logs will be saved to: $LOG_FILE"
 
-# =====================================================
-# STEP 1: COLLECT USER INPUT
-# =====================================================
+# STEP 1: Collecting all arguments from the user
 
 read -p "Enter Git Repository URL: " REPO_URL
 read -p "Enter Personal Access Token (PAT): " PAT
@@ -28,17 +24,15 @@ read -p "Enter application internal (container) port: " APP_PORT
 
 BRANCH=${BRANCH:-main} #set the branch to main automatically if the user does not provide a branch
 
-# Validate input
+# Validating the provided arguments
 if [[ -z "$REPO_URL" || -z "$PAT" || -z "$SSH_USER" || -z "$SERVER_IP" || -z "$SSH_KEY_PATH" || -z "$APP_PORT" ]]; then
   echo "⚠️  Missing input. Please fill all required fields."
   exit 1
 fi
 
-# =====================================================
-# STEP 2: CLONE OR UPDATE REPOSITORY
-# =====================================================
+# STEP 2: Clone the repository
 
-echo "=== CLONING REPOSITORY ==="
+echo " CLONING REPOSITORY "
 REPO_NAME=$(basename "$REPO_URL" .git)
 
 if [ -d "$REPO_NAME" ]; then
@@ -53,63 +47,55 @@ else
   cd "$REPO_NAME"
 fi
 
-# Check for Docker configuration
+# Confirm if there is a Dockerfile or Docker-compose.yml file
 if [ ! -f "Dockerfile" ] && [ ! -f "docker-compose.yml" ]; then
   echo "⚠️  Error: No Dockerfile or docker-compose.yml found."
   exit 1
 fi
-echo "✅ Docker configuration detected."
+echo "✅ Docker required files detected."
 
 cd ..
 
-# =====================================================
-# STEP 3: TEST SSH CONNECTION
-# =====================================================
+# STEP 3: Test the SSH Connection
 
-echo "=== TESTING SSH CONNECTION TO $SERVER_IP ==="
+echo " TESTING SSH CONNECTION TO $SERVER_IP "
 ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no "$SSH_USER@$SERVER_IP" "echo '✅ SSH connection successful.'"
 
-# =====================================================
-# STEP 4: PREPARE REMOTE ENVIRONMENT
-# =====================================================
+# STEP 4: Preparing the remote environment
 
-echo "=== PREPARING REMOTE ENVIRONMENT ==="
+echo " PREPARING REMOTE ENVIRONMENT "
 ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << 'EOF'
   set -e
-  echo "Updating system packages..."
+  echo "Updating all system packages..."
   sudo apt update -y
 
   echo "Installing Docker, Docker Compose, and Nginx..."
   sudo apt install -y docker.io docker-compose nginx
 
-  echo "Adding user to Docker group..."
+  echo "Adding the user to the Docker group..."
   sudo usermod -aG docker $(whoami)
 
-  echo "Enabling and starting services..."
+  echo "Enabling and starting all installed services..."
   sudo systemctl enable docker
   sudo systemctl start docker
   sudo systemctl enable nginx
   sudo systemctl start nginx
 
-  echo "Checking versions..."
+  echo "Checking versions of services installed..."
   docker --version
   docker-compose --version
   nginx -v
   echo "✅ Remote environment ready."
 EOF
 
-# =====================================================
-# STEP 5: TRANSFER PROJECT FILES
-# =====================================================
+# STEP 5: Cop Repository to Remote server
 
-echo "=== TRANSFERRING PROJECT FILES TO REMOTE SERVER ==="
+echo " COPY CLONED REPO FILES TO THE REMOTE SERVER "
 scp -i "$SSH_KEY_PATH" -r "$REPO_NAME" "$SSH_USER@$SERVER_IP":~/
 
-# =====================================================
-# STEP 6: DEPLOY DOCKERIZED APPLICATION
-# =====================================================
+# STEP 6: Deploy the Repo on the server
 
-echo "=== DEPLOYING APPLICATION ON REMOTE SERVER ==="
+echo " DEPLOYING APPLICATION ON THE REMOTE SERVER "
 ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
   set -e
   cd "$REPO_NAME"
@@ -125,14 +111,12 @@ ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
     sudo docker run -d -p "$APP_PORT:$APP_PORT" --name "$REPO_NAME" "$REPO_NAME"
   fi
 
-  echo "✅ Application containers deployed successfully."
+  echo "✅ Containers deployed successfully."
 EOF
 
-# =====================================================
-# STEP 7: CONFIGURE NGINX REVERSE PROXY
-# =====================================================
+# STEP 7: Configure the NGINX proxy
 
-echo "=== CONFIGURING NGINX REVERSE PROXY ==="
+echo " CONFIGURING NGINX PROXY "
 
 NGINX_CONF="
 server {
@@ -166,11 +150,9 @@ ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
   echo "✅ Nginx configuration completed."
 EOF
 
-# =====================================================
-# STEP 8: VALIDATE DEPLOYMENT
-# =====================================================
+# STEP 8: Validate the Deployment to ensure success
 
-echo "=== VALIDATING DEPLOYMENT ==="
+echo " VALIDATING DEPLOYMENT ..."
 ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
   set -e
   echo "Checking running containers..."
@@ -183,12 +165,10 @@ EOF
 echo "✅ Deployment successful! Your application should now be live."
 echo "Logs stored in: $LOG_FILE"
 
-# =====================================================
-# OPTIONAL: CLEANUP MODE
-# =====================================================
+# Clean, Clean, Clean
 
 if [[ "$1" == "--cleanup" ]]; then
-  echo "=== RUNNING CLEANUP MODE ON REMOTE HOST ==="
+  echo " CLEANING THE REMOTE HOST "
 
   read -p "Enter SSH username: " SSH_USER
   read -p "Enter remote server IP address: " SERVER_IP
@@ -214,9 +194,9 @@ if [[ "$1" == "--cleanup" ]]; then
     sudo rm -f /etc/nginx/sites-enabled/$REPO_NAME
     sudo nginx -t && sudo systemctl reload nginx
 
-    echo "✅ Cleanup completed successfully."
+    echo "✅ CleanING completed successfully."
 EOF
 
-  echo "✅ Remote cleanup completed. Exiting."
+  echo "✅ Exiting..."
   exit 0
 fi
