@@ -2,8 +2,6 @@
 
 This Bash script automates the process of deploying a Dockerized application to a remote server using SSH. It handles everything from cloning the repository to configuring Nginx as a reverse proxy.
 
----
-
 ## Overview
 
 The script performs these steps:
@@ -17,8 +15,6 @@ The script performs these steps:
 7. Configures Nginx reverse proxy
 8. Validates the deployment
 
----
-
 ## Prerequisites
 
 - Ubuntu system (local and remote)
@@ -27,8 +23,6 @@ The script performs these steps:
 - Nginx (installed automatically by the script)
 - GitHub repository with a Dockerfile or `docker-compose.yml`
 
----
-
 ## Example GitHub Repository
 
 **Repository URL:**
@@ -36,8 +30,6 @@ The script performs these steps:
 
 **Application Port:**
 3000
-
----
 
 ## Usage Instructions
 
@@ -62,8 +54,6 @@ You will be prompted to enter:
 - Remote server IP address
 - Path to SSH private key
 - Internal container port (e.g., 3000)
-
----
 
 ## Detailed Steps
 
@@ -190,8 +180,6 @@ Verify application accessibility:
 curl -I localhost
 ```
 
----
-
 ## Example Run
 
 ```bash
@@ -204,8 +192,6 @@ Enter remote server IP address: 18.210.xxx.xxx
 Enter path to SSH private key: ~/.ssh/id_rsa
 Enter application internal (container) port: 3000
 ```
-
----
 
 ## Logs
 
