@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# ------------------------------
+# =====================================================
 # SAFETY SETTINGS & LOGGING
-# ------------------------------
+# =====================================================
 
 set -e  # Exit immediately if a command fails
 set -o pipefail  # Fail if any part of a pipeline fails
@@ -11,12 +11,12 @@ set -o pipefail  # Fail if any part of a pipeline fails
 LOG_FILE="deploy_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1  # Log all output and errors
 
-echo "=== Starting deployment process ==="
+echo "=== STARTING DEPLOYMENT PROCESS ==="
 echo "Logs will be saved to: $LOG_FILE"
 
-# ------------------------------
-# STEP 1: Collect user input
-# ------------------------------
+# =====================================================
+# STEP 1: COLLECT USER INPUT
+# =====================================================
 
 read -p "Enter Git Repository URL: " REPO_URL
 read -p "Enter Personal Access Token (PAT): " PAT
@@ -30,15 +30,15 @@ BRANCH=${BRANCH:-main}
 
 # Validate input
 if [[ -z "$REPO_URL" || -z "$PAT" || -z "$SSH_USER" || -z "$SERVER_IP" || -z "$SSH_KEY_PATH" || -z "$APP_PORT" ]]; then
-  echo "❌ Missing input. Please fill all required fields."
+  echo "⚠️  Missing input. Please fill all required fields."
   exit 1
 fi
 
-# ------------------------------
-# STEP 2: Clone or update repo
-# ------------------------------
+# =====================================================
+# STEP 2: CLONE OR UPDATE REPOSITORY
+# =====================================================
 
-echo "=== Cloning repository ==="
+echo "=== CLONING REPOSITORY ==="
 REPO_NAME=$(basename "$REPO_URL" .git)
 
 if [ -d "$REPO_NAME" ]; then
@@ -55,71 +55,71 @@ fi
 
 # Check for Docker configuration
 if [ ! -f "Dockerfile" ] && [ ! -f "docker-compose.yml" ]; then
-  echo "❌ Error: No Dockerfile or docker-compose.yml found."
+  echo "⚠️  Error: No Dockerfile or docker-compose.yml found."
   exit 1
 fi
 echo "✅ Docker configuration detected."
 
 cd ..
 
-# ------------------------------
-# STEP 3: Test SSH connection
-# ------------------------------
+# =====================================================
+# STEP 3: TEST SSH CONNECTION
+# =====================================================
 
-echo "=== Testing SSH connection to $SERVER_IP ==="
+echo "=== TESTING SSH CONNECTION TO $SERVER_IP ==="
 ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no "$SSH_USER@$SERVER_IP" "echo '✅ SSH connection successful.'"
 
-# ------------------------------
-# STEP 4: Prepare remote environment
-# ------------------------------
+# =====================================================
+# STEP 4: PREPARE REMOTE ENVIRONMENT
+# =====================================================
 
-echo "=== Preparing remote environment ==="
+echo "=== PREPARING REMOTE ENVIRONMENT ==="
 ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << 'EOF'
   set -e
-  echo "🔧 Updating system packages..."
+  echo "Updating system packages..."
   sudo apt update -y
 
-  echo "📦 Installing Docker, Docker Compose, and Nginx..."
+  echo "Installing Docker, Docker Compose, and Nginx..."
   sudo apt install -y docker.io docker-compose nginx
 
-  echo "👥 Adding user to Docker group..."
+  echo "Adding user to Docker group..."
   sudo usermod -aG docker $(whoami)
 
-  echo "🔄 Enabling and starting services..."
+  echo "Enabling and starting services..."
   sudo systemctl enable docker
   sudo systemctl start docker
   sudo systemctl enable nginx
   sudo systemctl start nginx
 
-  echo "🧩 Checking versions..."
+  echo "Checking versions..."
   docker --version
   docker-compose --version
   nginx -v
   echo "✅ Remote environment ready."
 EOF
 
-# ------------------------------
-# STEP 5: Transfer project files
-# ------------------------------
+# =====================================================
+# STEP 5: TRANSFER PROJECT FILES
+# =====================================================
 
-echo "=== Transferring project files to remote server ==="
+echo "=== TRANSFERRING PROJECT FILES TO REMOTE SERVER ==="
 scp -i "$SSH_KEY_PATH" -r "$REPO_NAME" "$SSH_USER@$SERVER_IP":~/
 
-# ------------------------------
-# STEP 6: Deploy Dockerized application
-# ------------------------------
+# =====================================================
+# STEP 6: DEPLOY DOCKERIZED APPLICATION
+# =====================================================
 
-echo "=== Deploying application on remote server ==="
+echo "=== DEPLOYING APPLICATION ON REMOTE SERVER ==="
 ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
   set -e
   cd "$REPO_NAME"
 
   if [ -f "docker-compose.yml" ]; then
-    echo "🧱 Using docker-compose for deployment..."
+    echo "Using docker-compose for deployment..."
     sudo docker-compose down || true
     sudo docker-compose up -d --build
   else
-    echo "🐳 Using Dockerfile for manual deployment..."
+    echo "Using Dockerfile for manual deployment..."
     sudo docker build -t "$REPO_NAME" .
     sudo docker rm -f "$REPO_NAME" || true
     sudo docker run -d -p "$APP_PORT:$APP_PORT" --name "$REPO_NAME" "$REPO_NAME"
@@ -128,11 +128,11 @@ ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
   echo "✅ Application containers deployed successfully."
 EOF
 
-# ------------------------------
-# STEP 7: Configure Nginx reverse proxy
-# ------------------------------
+# =====================================================
+# STEP 7: CONFIGURE NGINX REVERSE PROXY
+# =====================================================
 
-echo "=== Configuring Nginx reverse proxy ==="
+echo "=== CONFIGURING NGINX REVERSE PROXY ==="
 
 NGINX_CONF="
 server {
@@ -151,53 +151,52 @@ server {
 
 ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
   set -e
-  echo "📝 Writing Nginx configuration..."
+  echo "Writing Nginx configuration..."
   echo '$NGINX_CONF' | sudo tee /etc/nginx/sites-available/$REPO_NAME > /dev/null
 
-  echo "🔗 Enabling site..."
+  echo "Enabling site..."
   sudo ln -sf /etc/nginx/sites-available/$REPO_NAME /etc/nginx/sites-enabled/
 
-  echo "🧪 Testing Nginx configuration..."
+  echo "Testing Nginx configuration..."
   sudo nginx -t
 
-  echo "🔁 Reloading Nginx..."
+  echo "Reloading Nginx..."
   sudo systemctl reload nginx
 
   echo "✅ Nginx configuration completed."
 EOF
 
-# ------------------------------
-# STEP 8: Validate deployment
-# ------------------------------
+# =====================================================
+# STEP 8: VALIDATE DEPLOYMENT
+# =====================================================
 
-echo "=== Validating deployment ==="
+echo "=== VALIDATING DEPLOYMENT ==="
 ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
   set -e
-  echo "🔍 Checking running containers..."
+  echo "Checking running containers..."
   sudo docker ps
 
-  echo "🌍 Testing application accessibility..."
+  echo "Testing application accessibility..."
   curl -I localhost || true
 EOF
 
 echo "✅ Deployment successful! Your application should now be live."
-echo "🗒️ Logs stored in: $LOG_FILE"
+echo "Logs stored in: $LOG_FILE"
 
+# =====================================================
+# OPTIONAL: CLEANUP MODE
+# =====================================================
 
-# ------------------------------
-# OPTIONAL: Cleanup mode
-# ------------------------------
 if [[ "$1" == "--cleanup" ]]; then
-  echo "=== Running cleanup mode on remote host ==="
+  echo "=== RUNNING CLEANUP MODE ON REMOTE HOST ==="
 
-  # Confirm parameters are available
   read -p "Enter SSH username: " SSH_USER
   read -p "Enter remote server IP address: " SERVER_IP
   read -p "Enter path to SSH private key: " SSH_KEY_PATH
   read -p "Enter repository name (folder name on server): " REPO_NAME
 
   if [[ -z "$SSH_USER" || -z "$SERVER_IP" || -z "$SSH_KEY_PATH" || -z "$REPO_NAME" ]]; then
-    echo "❌ Missing required parameters for cleanup."
+    echo "⚠️  Missing required parameters for cleanup."
     exit 1
   fi
 
