@@ -3,7 +3,7 @@
 # Settings to fail save for two different scenarios
 
 set -e  # Exit immediately if any command fails
-set -o pipefail  # To fail if any part of the pipeline fails
+set -o pipefail  # To fail if any part of the script fails
 
 # The timestamped log file for all output and errors 
 LOG_FILE="deploy_$(date +%Y%m%d_%H%M%S).log"
