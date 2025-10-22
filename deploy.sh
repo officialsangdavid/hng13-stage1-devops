@@ -2,7 +2,7 @@
 
 # Settings to fail save for two different scenarios
 
-set -e  # Exit immediately if any command fails
+set -e  # Exit immediately if any command fails or takes too long
 set -o pipefail  # To fail if any part of the script fails
 
 # The timestamped log file for all output and errors 
