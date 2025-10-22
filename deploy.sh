@@ -160,6 +160,13 @@ ssh -i "$SSH_KEY_PATH" "$SSH_USER@$SERVER_IP" bash << EOF
 
   echo "Testing application accessibility..."
   curl -I localhost || true
+
+   if [ "\$STATUS_CODE" -eq 200 ]; then
+    echo "✅ Server is accessible (HTTP 200)."
+  else
+    echo "❌ Server not responding properly (HTTP \$STATUS_CODE)."
+    exit 1
+  fi
 EOF
 
 echo "✅ Deployment successful! Your application should now be live."
