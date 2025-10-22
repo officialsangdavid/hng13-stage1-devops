@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# SAFETY SETTINGS & LOGGING
+# Settings to fail save for two different scenarios
 
 set -e  # Exit immediately if any command fails
 set -o pipefail  # To fail if any part of the pipeline fails
