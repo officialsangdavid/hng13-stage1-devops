@@ -6,7 +6,7 @@ set -e  # Exit immediately if any command fails
 set -o pipefail  # To fail if any part of the script fails
 
 # The timestamped log file for all output and errors 
-LOG_FILE="deploy_$(date +%Y%m%d_%H%M%S).log"
+LOG_FILE="mytestfile_$(date +%Y%m%d_%H%M%S).log"
 exec > >(tee -a "$LOG_FILE") 2>&1 
 
 echo " STARTING THE DEPLOYMENT PROCESS "
